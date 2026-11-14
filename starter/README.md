@@ -56,10 +56,44 @@ docker compose -p day6_student_starter stop
 
 ## 3. Hoàn thiện pipeline
 
+### Corpus Python Documentation đã chuẩn bị
+
+Repo này triển khai corpus từ tài liệu Python chính thức, cố định ở Python
+3.15.2. Tải lại 30 unit HTML và tạo manifest bằng:
+
+```bash
+python scripts/download_python_docs.py
+```
+
+Các file được lưu ở `data/corpus/` và `data/manifest.json`. Mỗi unit có URL,
+version, section, module và số ký tự; các unit đã tải đều có ít nhất 1.500 ký
+tự sau khi trích xuất text.
+
 1. Đặt corpus vào `data/` hoặc cung cấp manifest/hướng dẫn truy cập. Đọc [GUIDE.md](../GUIDE.md) về **30 trang nội dung**, quyền dữ liệu và metadata.
 2. Hoàn thiện từng hàm TODO trong `src/`. Lưu ID tài liệu, nguồn, trang/vị trí và ít nhất một trường filter có ích.
 3. Xây ít nhất ba cấu hình; ví dụ A fixed-size, B theo đoạn, C như B nhưng có filter. Cần cùng corpus, model và benchmark; nạp lại không nhân đôi và xử lý chunk cũ khi dữ liệu đổi.
 4. Tự viết ít nhất 20 câu hỏi kèm evidence, tách dev/test trước khi thử theo [BENCHMARK.md](../BENCHMARK.md). Lưu trace top-3 và báo cáo đủ năm tiêu chí.
-5. Sau khi hoàn thiện, chạy `python -m src.run` từ thư mục `starter/`. Trước khi làm TODO, lệnh này **chủ động báo `NotImplementedError`**.
+5. Tạo và kiểm chứng `benchmark/questions.json` theo `benchmark/README.md`.
+6. Sau khi điền API key, model và benchmark, chạy `python -m src.run` từ thư mục `starter/`.
+
+## 4. Demo web
+
+Sau khi database đã được nạp vector, chạy web demo từ thư mục `starter/`:
+
+```bash
+python web_demo.py
+```
+
+Mở `http://127.0.0.1:8000`. Demo cho phép chọn A/B/C, nhập câu hỏi và nhập
+metadata filter JSON cho strategy C. API key chỉ được đọc ở server từ `.env` và
+không được gửi tới trình duyệt. Demo hiển thị riêng câu trả lời được sinh bởi
+OpenRouter và các evidence top-3 đã truy xuất, để phân biệt Generation với Retrieval.
+
+Thêm cấu hình generation vào `.env`:
+
+```env
+OPENROUTER_API_KEY=sk-or-...
+CHAT_MODEL=openai/gpt-4o-mini
+```
 
 Lưu code, cấu hình, kết quả và lệnh chạy để người chấm tái lập; không commit key, dữ liệu mật hoặc dữ liệu không có quyền chia sẻ.
