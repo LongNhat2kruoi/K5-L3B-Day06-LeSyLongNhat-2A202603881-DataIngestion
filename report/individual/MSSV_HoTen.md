@@ -105,3 +105,14 @@ python -m src.run
 
 Kết quả lưu tại `starter/results/metrics.json` và `starter/results/traces.json`;
 cấu hình thí nghiệm nằm trong `artifacts/experiment_log.csv`.
+
+## Web demo và ý nghĩa hai lớp RAG
+
+Web demo chạy bằng `python web_demo.py` tại `http://127.0.0.1:8000`. Giao diện
+hiển thị riêng hai phần:
+
+- **Retrieval:** top-3 chunk từ pgvector, score, source, unit và metadata.
+- **Generation:** câu trả lời tiếng Việt do OpenRouter sinh từ top-3 evidence.
+
+Nếu evidence không đủ, hệ thống trả về: `Tài liệu hiện có không cung cấp đủ thông tin để trả lời câu hỏi này.`
+Metrics benchmark chỉ đánh giá retrieval; generation là phần demo bổ sung.

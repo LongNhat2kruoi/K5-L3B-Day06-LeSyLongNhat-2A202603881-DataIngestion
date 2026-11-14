@@ -3,68 +3,148 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Day 06 · Retrieval Demo</title>
+  <title>Day 06 - RAG Demo</title>
   <style>
     :root { color-scheme: dark; font-family: Inter, system-ui, sans-serif; }
     body { margin: 0; background: #101522; color: #eef2ff; }
-    main { max-width: 980px; margin: 0 auto; padding: 42px 20px 64px; }
+    main { max-width: 1100px; margin: 0 auto; padding: 42px 20px 64px; }
     .eyebrow { color: #8ea6ff; text-transform: uppercase; letter-spacing: .12em; font-size: 12px; }
     h1 { font-size: clamp(32px, 6vw, 58px); line-height: 1; margin: 12px 0; }
-    .sub { color: #aab4ca; max-width: 680px; }
-    .panel, .result { background: #192136; border: 1px solid #2b3858; border-radius: 16px; padding: 18px; margin-top: 24px; }
+    h2 { margin-top: 0; color: #b9c6ff; }
+    .sub { color: #aab4ca; max-width: 780px; }
+    .panel, .result { background: #192136; border: 1px solid #2b3858; border-radius: 16px; padding: 18px; margin-top: 18px; }
     label { display: block; color: #aab4ca; font-size: 13px; margin: 14px 0 7px; }
     textarea, select, input { box-sizing: border-box; width: 100%; border: 1px solid #3a496e; border-radius: 10px; background: #0e1422; color: #fff; padding: 12px; font: inherit; }
     textarea { min-height: 90px; resize: vertical; }
     .row { display: grid; grid-template-columns: 150px 1fr auto; gap: 12px; align-items: end; }
     button { border: 0; border-radius: 10px; padding: 12px 18px; background: #7690ff; color: #0b1020; font-weight: 700; cursor: pointer; }
     button:disabled { opacity: .5; cursor: wait; }
-    .hint, #status { color: #8f9bb7; font-size: 13px; }
+    .tabs { display: flex; gap: 8px; margin: 24px 0 8px; }
+    .tab { background: #192136; color: #aab4ca; border: 1px solid #2b3858; }
+    .tab.active { background: #7690ff; color: #0b1020; }
+    .view { display: none; }
+    .view.active { display: block; }
+    .hint, #status, .meta { color: #8f9bb7; font-size: 13px; }
     .result h3 { margin: 0 0 8px; color: #b9c6ff; }
     .answer { background: #202d4b; border-color: #6d83dd; }
     .split { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); gap: 18px; align-items: start; }
-    .meta { color: #8f9bb7; font-size: 12px; margin-bottom: 10px; }
     pre { white-space: pre-wrap; margin: 0; line-height: 1.55; }
     .error { color: #ff9d9d; }
-    @media (max-width: 800px) { .row, .split { grid-template-columns: 1fr; } }
+    .metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .metric { background: #202d4b; border: 1px solid #354773; border-radius: 12px; padding: 14px; }
+    .metric strong { display: block; font-size: 25px; color: #b9c6ff; margin-bottom: 6px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 14px; }
+    th, td { border-bottom: 1px solid #33415f; padding: 10px 8px; text-align: left; vertical-align: top; }
+    th { color: #b9c6ff; }
+    .question-card { background: #192136; border: 1px solid #2b3858; border-radius: 12px; padding: 14px; margin-top: 10px; }
+    .question-card p { margin: 7px 0; }
+    .pill { display: inline-block; color: #b9c6ff; background: #2a3a68; border-radius: 99px; padding: 3px 8px; font-size: 12px; margin: 0 5px 5px 0; }
+    @media (max-width: 800px) { .row, .split, .metrics { grid-template-columns: 1fr; } }
   </style>
 </head>
 <body>
 <main>
-  <div class="eyebrow">Day 06 · Data Ingestion Engineering</div>
-  <h1>Python Docs<br>Retrieval Demo</h1>
-    <p class="sub">Nhìn rõ hai lớp của RAG: câu trả lời tiếng Việt do OpenRouter sinh ra và evidence top-3 mà pgvector truy xuất.</p>
-  <section class="panel">
-    <label for="question">Câu hỏi</label>
-    <textarea id="question">What are the two distinguishable kinds of errors in Python?</textarea>
-    <div class="row">
-      <div><label for="strategy">Strategy</label><select id="strategy"><option>A</option><option>B</option><option selected>C</option></select></div>
-      <div><label for="filter">Metadata filter (chỉ C, JSON)</label><input id="filter" value='{"section":"tutorial"}'></div>
-      <button id="search">Retrieve</button>
+  <div class="eyebrow">Day 06 - Data Ingestion Engineering</div>
+  <h1>Python Docs<br>RAG Demo</h1>
+  <p class="sub">Chat để thử Retrieval + Generation. Benchmark để hiểu cách đánh giá ba chiến lược A/B/C trên cùng một bộ câu hỏi.</p>
+  <nav class="tabs">
+    <button class="tab active" data-view="chat-view">Chat RAG</button>
+    <button class="tab" data-view="benchmark-view">Benchmark A/B/C</button>
+  </nav>
+
+  <section id="chat-view" class="view active">
+    <section class="panel">
+      <label for="question">Câu hỏi</label>
+      <textarea id="question">What are the two distinguishable kinds of errors in Python?</textarea>
+      <div class="row">
+        <div><label for="strategy">Strategy</label><select id="strategy"><option>A</option><option>B</option><option selected>C</option></select></div>
+        <div><label for="filter">Metadata filter (chỉ C, JSON)</label><input id="filter" value='{"section":"tutorial"}'></div>
+        <button id="search">Retrieve + Answer</button>
+      </div>
+      <p id="status" class="hint">A: fixed-size - B: paragraph - C: paragraph + metadata filter - Generation: OpenRouter</p>
+    </section>
+    <div class="split">
+      <section id="answer"></section>
+      <section id="results"></section>
     </div>
-    <p id="status" class="hint">A: fixed-size · B: paragraph · C: paragraph + metadata filter · Generation: OpenRouter</p>
   </section>
-  <div class="split">
-    <section id="answer"></section>
-    <section id="results"></section>
-  </div>
+
+  <section id="benchmark-view" class="view">
+    <section class="panel">
+      <h2>Benchmark: đo lường retrieval</h2>
+      <p class="sub">Cùng corpus, embedding model và 20 câu hỏi được chạy qua A, B, C. Dev dùng để so sánh; test giữ lại để đánh giá sau cùng.</p>
+      <div class="metrics" id="metric-cards"><div class="hint">Đang tải metrics...</div></div>
+      <table>
+        <thead><tr><th>Strategy</th><th>Cấu hình</th><th>Dev Hit@1</th><th>Dev Evidence Hit@3</th><th>Test Hit@1</th><th>Test Evidence Hit@3</th></tr></thead>
+        <tbody id="metric-table"></tbody>
+      </table>
+    </section>
+    <section class="panel">
+      <h2>Cách đọc A / B / C</h2>
+      <p><span class="pill">A</span> Fixed-size chunk 500 ký tự, overlap 50, không filter.</p>
+      <p><span class="pill">B</span> Chunk theo paragraph, tối đa 800 ký tự, không filter.</p>
+      <p><span class="pill">C</span> Giống B nhưng dùng metadata filter khi câu hỏi có filter.</p>
+      <p class="hint">Hit@1 đo chunk đúng ở vị trí đầu tiên. Evidence Hit@3 đo có ít nhất một chunk đúng trong top-3. Coherence, metadata và grounding cần audit thủ công, không được thay bằng Hit@3.</p>
+    </section>
+    <section class="panel">
+      <h2>20 câu hỏi đánh giá và kết quả từng câu</h2>
+      <div id="question-list"><div class="hint">Đang tải benchmark...</div></div>
+    </section>
+  </section>
 </main>
 <script>
 const $ = (id) => document.getElementById(id);
+const escapeHtml = (value) => String(value).replace(/[&<>'"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;","\"":"&quot;"}[c]));
+
 $("search").onclick = async () => {
-  const button = $("search"); const out = $("results"); const answer = $("answer"); button.disabled = true; out.innerHTML = ""; answer.innerHTML = ""; $("status").textContent = "Retrieving evidence, then generating a grounded answer…";
+  const button = $("search"); const out = $("results"); const answer = $("answer");
+  button.disabled = true; out.innerHTML = ""; answer.innerHTML = "";
+  $("status").textContent = "Đang truy xuất evidence rồi sinh câu trả lời...";
   try {
     const strategy = $("strategy").value; let filters = null;
     if ($("filter").value.trim() && strategy === "C") filters = JSON.parse($("filter").value);
     const response = await fetch("/api/search", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({question:$("question").value, strategy, filters})});
     const data = await response.json(); if (!response.ok) throw new Error(data.error || "Request failed");
-    $("status").textContent = `${data.results.length} evidence chunks · strategy ${data.strategy}`;
+    $("status").textContent = data.results.length + " evidence chunks - strategy " + data.strategy;
     const answerText = typeof data.answer === "string" && data.answer.trim() ? data.answer : "Tài liệu hiện có không cung cấp đủ thông tin để trả lời câu hỏi này.";
-    answer.innerHTML = `<article class="result answer"><h3>Generated answer · OpenRouter</h3><pre>${escapeHtml(answerText)}</pre></article>`;
-    out.innerHTML = data.results.map((item, i) => `<article class="result"><h3>#${i+1} · score ${item.score.toFixed(4)}</h3><div class="meta">${item.document_id} · ${item.page} · ${item.source}</div><pre>${escapeHtml(item.text)}</pre><div class="meta">${escapeHtml(JSON.stringify(item.metadata))}</div></article>`).join("");
-  } catch (error) { $("status").innerHTML = `<span class="error">${escapeHtml(error.message)}</span>`; }
+    answer.innerHTML = '<article class="result answer"><h3>Generated answer - OpenRouter</h3><pre>' + escapeHtml(answerText) + '</pre></article>';
+    out.innerHTML = data.results.map((item, i) => '<article class="result"><h3>#' + (i+1) + ' - score ' + item.score.toFixed(4) + '</h3><div class="meta">' + escapeHtml(item.document_id) + ' · ' + escapeHtml(item.page) + ' · ' + escapeHtml(item.source) + '</div><pre>' + escapeHtml(item.text) + '</pre><div class="meta">' + escapeHtml(JSON.stringify(item.metadata)) + '</div></article>').join("");
+  } catch (error) { $("status").innerHTML = '<span class="error">' + escapeHtml(error.message) + '</span>'; }
   finally { button.disabled = false; }
 };
-function escapeHtml(value) { return String(value).replace(/[&<>'"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;","\"":"&quot;"}[c])); }
+
+document.querySelectorAll(".tab").forEach(tab => tab.onclick = () => {
+  document.querySelectorAll(".tab").forEach(item => item.classList.remove("active"));
+  document.querySelectorAll(".view").forEach(view => view.classList.remove("active"));
+  tab.classList.add("active"); $(tab.dataset.view).classList.add("active");
+  if (tab.dataset.view === "benchmark-view") loadBenchmark();
+});
+let benchmarkLoaded = false;
+async function loadBenchmark() {
+  if (benchmarkLoaded) return;
+  try {
+    const response = await fetch("/api/benchmark"); const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "Không tải được benchmark");
+    const strategies = ["A", "B", "C"];
+    $("metric-cards").innerHTML = strategies.map(strategy => {
+      const dev = data.metrics[strategy].dev; const test = data.metrics[strategy].test;
+      return '<div class="metric"><strong>' + strategy + '</strong>Hit@1: ' + (dev.hit_at_1 + test.hit_at_1) + '/' + (dev.n + test.n) + '<br>Evidence Hit@3: ' + (dev.evidence_hit_at_3 + test.evidence_hit_at_3) + '/' + (dev.n + test.n) + '</div>';
+    }).join("");
+    const labels = {A:"Fixed-size 500/50", B:"Paragraph 800", C:"Paragraph 800 + filter"};
+    $("metric-table").innerHTML = strategies.map(strategy => {
+      const dev = data.metrics[strategy].dev; const test = data.metrics[strategy].test;
+      return '<tr><td><strong>' + strategy + '</strong></td><td>' + labels[strategy] + '</td><td>' + dev.hit_at_1 + '/' + dev.n + '</td><td>' + dev.evidence_hit_at_3 + '/' + dev.n + '</td><td>' + test.hit_at_1 + '/' + test.n + '</td><td>' + test.evidence_hit_at_3 + '/' + test.n + '</td></tr>';
+    }).join("");
+    const traceMap = {};
+    data.traces.forEach(trace => { if (!traceMap[trace.question_id]) traceMap[trace.question_id] = {}; traceMap[trace.question_id][trace.strategy] = trace; });
+    const mark = value => value ? '<span class="pill">✓</span>' : '<span class="pill">✗</span>';
+    $("question-list").innerHTML = data.questions.map(q => {
+      const row = traceMap[q.id] || {};
+      return '<article class="question-card"><span class="pill">' + escapeHtml(q.split) + '</span>' + (q.filter ? '<span class="pill">filter: ' + escapeHtml(JSON.stringify(q.filter)) + '</span>' : "") + '<strong>' + escapeHtml(q.id) + '</strong><p>' + escapeHtml(q.question) + '</p><div class="meta">Gold unit: ' + escapeHtml(q.gold_page) + ' · Evidence: ' + escapeHtml(q.evidence_quote) + '</div><table><thead><tr><th>Strategy</th><th>Hit@1</th><th>Evidence Hit@3</th></tr></thead><tbody>' + ["A","B","C"].map(s => '<tr><td><strong>' + s + '</strong></td><td>' + (row[s] ? mark(row[s].hit_at_1) : '-') + '</td><td>' + (row[s] ? mark(row[s].evidence_hit_at_3) : '-') + '</td></tr>').join("") + '</tbody></table></article>';
+    }).join("");
+    benchmarkLoaded = true;
+  } catch (error) { $("question-list").innerHTML = '<span class="error">' + escapeHtml(error.message) + '</span>'; }
+}
 </script>
 </body>
 </html>

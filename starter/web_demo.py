@@ -112,6 +112,14 @@ class Handler(BaseHTTPRequestHandler):
         path = urlparse(self.path).path
         if path == "/" or path == "/index.html":
             self._send(200, (ROOT / "web/index.html").read_bytes(), "text/html; charset=utf-8")
+        elif path == "/api/benchmark":
+            try:
+                metrics = json.loads((ROOT / "results/metrics.json").read_text(encoding="utf-8"))
+                questions = json.loads((ROOT / "benchmark/questions.json").read_text(encoding="utf-8"))
+                traces = json.loads((ROOT / "results/traces.json").read_text(encoding="utf-8"))
+                self._send(200, json.dumps({"metrics": metrics, "questions": questions, "traces": traces}, ensure_ascii=False).encode(), "application/json")
+            except (FileNotFoundError, json.JSONDecodeError) as exc:
+                self._send(500, json.dumps({"error": str(exc)}).encode(), "application/json")
         elif path == "/api/health":
             self._send(200, json.dumps({"ok": True, "demo_version": "generation-v1"}).encode(), "application/json")
         else:

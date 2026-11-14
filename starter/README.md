@@ -78,6 +78,11 @@ tự sau khi trích xuất text.
 
 ## 4. Demo web
 
+Repo này gồm hai lớp rõ ràng: retrieval để đo benchmark và generation để trình
+diễn câu trả lời. Retrieval lấy top-3 evidence từ pgvector; generation gửi đúng
+evidence đó sang OpenRouter. Vì vậy câu trả lời LLM không được dùng để thay thế
+Hit@1 hoặc Evidence Hit@3.
+
 Sau khi database đã được nạp vector, chạy web demo từ thư mục `starter/`:
 
 ```bash
